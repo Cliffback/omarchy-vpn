@@ -1,12 +1,16 @@
-.env
-.env.*
-!.env.example
+# Build artifacts
 omarchy-vpn
 *.pkg.tar.zst
 pkg/
 src/
-docs/
-CLAUDE.md
+dist/
+
+# Secrets
+.env
+.env.*
+!.env.example
+
+# Misc
+nohup.out
 talisman_report/
-.talismanrc
 demo.tape
