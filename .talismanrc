@@ -29,6 +29,9 @@ fileignoreconfig:
 - filename: config_panel.go
   ignore_detectors:
     - filecontent
+- filename: CLAUDE.md
+  ignore_detectors:
+    - filecontent
 - filename: demo.gif
   checksum: 83f6f04599fe68397275c6e564959030417df7e871b98edbf8e0ea2c50aa27a6
 version: "1.0"
