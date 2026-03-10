@@ -34,15 +34,13 @@
 
 ## Installation
 
-### Arch Linux (PKGBUILD)
+### AUR
 
 ```bash
-git clone https://github.com/limehawk/omarchy-vpn.git
-cd omarchy-vpn
-makepkg -si
+yay -S omarchy-vpn
 ```
 
-`makepkg -si` builds, installs dependencies (`wireguard-tools`, `systemd-resolvconf`), and sets up sudoers — all through pacman.
+Or with any AUR helper. Installs dependencies (`wireguard-tools`, `systemd-resolvconf`) and sets up sudoers automatically.
 
 ### From source
 
