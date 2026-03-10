@@ -20,6 +20,8 @@ const waybarCSSConnected = `
   color: @accent;
 }`
 
+const hyprlandWindowRule = `windowrule = tag +floating-window, match:class org.omarchy.omarchy-vpn`
+
 func waybarConfigPath() string {
 	home, _ := os.UserHomeDir()
 	return filepath.Join(home, ".config", "waybar", "config.jsonc")
@@ -30,12 +32,20 @@ func waybarStylePath() string {
 	return filepath.Join(home, ".config", "waybar", "style.css")
 }
 
+func hyprlandConfigPath() string {
+	home, _ := os.UserHomeDir()
+	return filepath.Join(home, ".config", "hypr", "hyprland.conf")
+}
+
 func setupWaybar() error {
 	if err := patchWaybarConfig(); err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
 	if err := patchWaybarStyle(); err != nil {
 		return fmt.Errorf("style: %w", err)
+	}
+	if err := patchHyprlandConfig(); err != nil {
+		return fmt.Errorf("hyprland: %w", err)
 	}
 	fmt.Println("Waybar VPN module installed.")
 	return nil
@@ -47,6 +57,9 @@ func removeWaybar() error {
 	}
 	if err := unpatchWaybarStyle(); err != nil {
 		return fmt.Errorf("style: %w", err)
+	}
+	if err := unpatchHyprlandConfig(); err != nil {
+		return fmt.Errorf("hyprland: %w", err)
 	}
 	fmt.Println("Waybar VPN module removed.")
 	return nil
@@ -160,6 +173,40 @@ func unpatchWaybarStyle() error {
 
 	content = strings.Replace(content, "#custom-vpn,\n", "", 1)
 	content = strings.Replace(content, waybarCSSConnected, "", 1)
+
+	return os.WriteFile(path, []byte(content), 0644)
+}
+
+func patchHyprlandConfig() error {
+	path := hyprlandConfigPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	content := string(data)
+
+	if strings.Contains(content, "org.omarchy.omarchy-vpn") {
+		return nil
+	}
+
+	content = strings.TrimRight(content, "\n") + "\n\n" + hyprlandWindowRule + "\n"
+	return os.WriteFile(path, []byte(content), 0644)
+}
+
+func unpatchHyprlandConfig() error {
+	path := hyprlandConfigPath()
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	content := string(data)
+
+	if !strings.Contains(content, "org.omarchy.omarchy-vpn") {
+		return nil
+	}
+
+	content = strings.Replace(content, "\n"+hyprlandWindowRule, "", 1)
+	content = strings.Replace(content, hyprlandWindowRule+"\n", "", 1)
 
 	return os.WriteFile(path, []byte(content), 0644)
 }
