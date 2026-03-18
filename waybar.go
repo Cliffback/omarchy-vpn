@@ -18,7 +18,7 @@ const waybarModuleBlock = `  "custom/vpn": {
 
 const waybarCSSBase = `
 #custom-vpn {
-  margin-right: 13px;
+  margin-right: 15px;
 }`
 
 const waybarCSSConnected = `
