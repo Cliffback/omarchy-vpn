@@ -15,6 +15,11 @@ const waybarModuleBlock = `  "custom/vpn": {
     "tooltip": true
   }`
 
+const waybarCSSBase = `
+#custom-vpn {
+  margin-right: 13px;
+}`
+
 const waybarCSSConnected = `
 #custom-vpn.connected {
   color: @accent;
@@ -153,6 +158,7 @@ func patchWaybarStyle() error {
 			"#custom-update {",
 			"#custom-vpn,\n#custom-update {",
 			1)
+		content += waybarCSSBase
 		content += waybarCSSConnected
 	}
 
@@ -172,6 +178,7 @@ func unpatchWaybarStyle() error {
 	}
 
 	content = strings.Replace(content, "#custom-vpn,\n", "", 1)
+	content = strings.Replace(content, waybarCSSBase, "", 1)
 	content = strings.Replace(content, waybarCSSConnected, "", 1)
 
 	return os.WriteFile(path, []byte(content), 0644)
