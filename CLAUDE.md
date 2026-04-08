@@ -37,7 +37,7 @@ Single Bubble Tea program with modal states instead of view routing. All UI is o
 | `status_panel.go` | Right panel — live stats (connected) or config preview (disconnected) |
 | `wireguard.go` | Backend — all `sudo` exec calls to wg-quick/wg/ls/cp/mv/rm |
 | `styles.go` | Semantic color variables + all lipgloss styles (initialized by `initStyles()`) |
-| `theme.go` | Loads colors from omarchy btop theme (`~/.config/omarchy/current/theme/btop.theme`), falls back to ANSI |
+| `theme.go` | ANSI terminal color assignments → `initColors()` → `initStyles()` |
 | `help.go` | `keyMap` with `key.Binding` definitions, `help.Model` with custom styles |
 
 ## Key Patterns
@@ -100,8 +100,6 @@ git push
 
 ## Theming
 
-Colors are loaded at startup from the omarchy btop theme file (`~/.config/omarchy/current/theme/btop.theme`). This file exists for every omarchy theme (stock and custom) and contains semantic color mappings chosen by theme creators. Falls back to ANSI terminal colors on non-omarchy systems.
-
-Key btop.theme fields used: `main_fg`, `main_bg`, `title`, `hi_fg`, `selected_bg`, `selected_fg`, `inactive_fg`, `proc_misc`, `div_line`.
+Uses ANSI terminal colors (0-8) via `lipgloss.ANSIColor()`. The terminal emulator maps these to whatever palette the active system theme defines, so colors update automatically when the theme changes. No theme files are read directly.
 
 **Do NOT hardcode hex colors.** All colors come from `theme.go` → `initColors()` → `initStyles()`.

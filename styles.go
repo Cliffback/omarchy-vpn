@@ -6,7 +6,7 @@ import (
 	"charm.land/lipgloss/v2"
 )
 
-// Semantic color variables — set by initColors() in theme.go
+// Semantic color variables — ANSI terminal colors, set by initColors()
 var (
 	green     color.Color // connected, active states
 	red       color.Color // errors
