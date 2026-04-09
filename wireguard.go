@@ -7,6 +7,19 @@ import (
 	"strings"
 )
 
+// isValidConfigName returns true if name contains only [a-zA-Z0-9_-].
+func isValidConfigName(name string) bool {
+	if name == "" {
+		return false
+	}
+	for _, r := range name {
+		if !((r >= 'a' && r <= 'z') || (r >= 'A' && r <= 'Z') || (r >= '0' && r <= '9') || r == '-' || r == '_') {
+			return false
+		}
+	}
+	return true
+}
+
 type VPNStatus struct {
 	Interface  string
 	Endpoint   string
@@ -24,6 +37,9 @@ func GetActiveVPN() string {
 	if i := strings.Index(iface, "\n"); i != -1 {
 		iface = iface[:i]
 	}
+	if !isValidConfigName(iface) {
+		return ""
+	}
 	return iface
 }
 
@@ -35,7 +51,10 @@ func ListConfigs() []string {
 	var configs []string
 	for _, line := range strings.Split(strings.TrimSpace(string(out)), "\n") {
 		if strings.HasSuffix(line, ".conf") {
-			configs = append(configs, strings.TrimSuffix(line, ".conf"))
+			name := strings.TrimSuffix(line, ".conf")
+			if isValidConfigName(name) {
+				configs = append(configs, name)
+			}
 		}
 	}
 	return configs
