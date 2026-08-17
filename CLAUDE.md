@@ -78,11 +78,12 @@ Single Bubble Tea program with modal states instead of view routing. All UI is o
 
 ## AUR Publishing
 
-The package is published to AUR at `https://aur.archlinux.org/packages/omarchy-vpn`. AUR is a **separate git server** from GitHub — two independent repos.
+Source of truth is Forgejo (`limehawk/omarchy-vpn`). GitHub is a push mirror. AUR is a **separate git server** — tarball PKGBUILD only.
 
 | Repo | URL | Contents |
 |------|-----|----------|
-| GitHub | `github.com/limehawk/omarchy-vpn` | Source code + local-build PKGBUILD |
+| Forgejo | `origin/limehawk/omarchy-vpn` | Source of truth |
+| GitHub | `github.com/limehawk/omarchy-vpn` | Push mirror (AUR tarball host) |
 | AUR | `aur.archlinux.org/omarchy-vpn.git` | Tarball PKGBUILD + `.SRCINFO` + `.install` only |
 
 **AUR SSH:** Requires an SSH key registered with AUR. See [AUR submission guidelines](https://wiki.archlinux.org/title/AUR_submission_guidelines).
@@ -90,11 +91,13 @@ The package is published to AUR at `https://aur.archlinux.org/packages/omarchy-v
 **Release process:**
 
 ```bash
-# 1. Tag + release on GitHub
-git tag v0.X.X && git push && git push --tags
+# 1. Tag + push (Forgejo origin mirrors to GitHub)
+git tag -a v0.X.X -m "omarchy-vpn 0.X.X"
+git push && git push --tags
+fj -H origin release create v0.X.X -t v0.X.X
 gh release create v0.X.X
 
-# 2. Get new tarball checksum
+# 2. Get new tarball checksum (AUR still fetches the GitHub archive)
 curl -sL "https://github.com/limehawk/omarchy-vpn/archive/v0.X.X.tar.gz" | sha256sum
 
 # 3. Clone AUR repo (if not already cloned — /tmp is fine, it's throwaway)
