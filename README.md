@@ -22,13 +22,13 @@
 
 ## Features
 
-- **Single-screen dashboard** — two-panel layout, no menus to navigate
+- **Single-screen dashboard** — Tunnels list and Details on one screen, stacked on a narrow terminal
 - **Live connection stats** — endpoint, transfer, handshake refreshing every second
 - **Config preview** — highlight a config to see its details before connecting
 - **Multiple tunnels** — connect to several sites at once when their AllowedIPs don't overlap; overlapping configs (e.g. two full tunnels) switch automatically
 - **Inline operations** — rename and delete configs without leaving the dashboard
 - **Built-in file picker** — browse and import `.conf` / `.wg` files natively
-- **Catppuccin Mocha** — terminal colors with nerd font icons
+- **Follows the terminal theme** — ANSI colors, no hardcoded palette or nerd icons
 - **Persistent connections** — quit the TUI, VPN stays connected
 - **NetBird aware** — if NetBird is installed, toggle it from the same dashboard alongside your WireGuard tunnels
 - **Bar integration** — status icon with connection details tooltip, click to launch TUI (Waybar on Omarchy 3, Omarchy shell on Omarchy 4)

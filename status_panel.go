@@ -5,8 +5,6 @@ import (
 	"os"
 	"os/exec"
 	"strings"
-
-	"charm.land/lipgloss/v2"
 )
 
 // ConfigInfo holds static config details parsed from a .conf file.
@@ -70,10 +68,9 @@ func (m model) renderStatusPanel(width, height int) string {
 		return m.renderWarpStatusPanel(width, height)
 	}
 
-	innerWidth := width - 4
 	name := m.selectedConfig()
 	if name == "" {
-		return renderSheet(width, height, []string{dimStyle.Render("  No configs.")})
+		return renderKVTable(width, height, nil)
 	}
 
 	info := ParseConfigFile(name)
@@ -90,85 +87,85 @@ func (m model) renderStatusPanel(width, height int) string {
 		{"DNS", info.DNS},
 		{"Endpoint", firstNonEmpty(s.Endpoint, info.Endpoint)},
 		{"Peer", peer},
+		{"Path", fmt.Sprintf("/etc/wireguard/%s.conf", name)},
 	}
 	if up {
-		fields = append(fields,
-			sheetField{"Download", s.TransferRx},
-			sheetField{"Upload", s.TransferTx},
-			sheetField{"Handshake", s.Handshake},
-		)
+		fields = []sheetField{
+			{"Status", statusWord(true)},
+			{"Address", info.Address},
+			{"Endpoint", firstNonEmpty(s.Endpoint, info.Endpoint)},
+			{"Download", s.TransferRx},
+			{"Upload", s.TransferTx},
+			{"Handshake", s.Handshake},
+			{"Path", fmt.Sprintf("/etc/wireguard/%s.conf", name)},
+		}
 	}
-	fields = append(fields, sheetField{"Path", fmt.Sprintf("/etc/wireguard/%s.conf", name)})
 
-	return renderSheet(width, height, sheetLines(fields, innerWidth))
+	return renderKVTable(width, height, fields)
 }
 
 func (m model) renderNetbirdStatusPanel(width, height int) string {
-	innerWidth := width - 4
 	s := m.netbirdStatus
 
 	switch {
 	case s.Connected():
 		fields := []sheetField{
-			{"Status", "Connected"},
+			{"Status", statusWord(true)},
 			{"Address", s.IP},
 			{"FQDN", s.FQDN},
-			{"Peers", fmt.Sprintf("%d/%d connected", s.PeersConnected, s.PeersTotal)},
+			{"Peers", fmt.Sprintf("%d/%d", s.PeersConnected, s.PeersTotal)},
 			{"Download", formatBytes(s.TransferRx)},
 			{"Upload", formatBytes(s.TransferTx)},
 			{"Management", s.MgmtURL},
 		}
-		return renderSheet(width, height, sheetLines(fields, innerWidth))
+		return renderKVTable(width, height, fields)
 	case s.DaemonStatus == "":
-		return renderSheet(width, height, []string{
-			"  " + dimStyle.Render(statusWord(false)),
-			"  " + dimStyle.Render("Daemon down"),
-			"  " + dimStyle.Render("sudo systemctl enable --now netbird"),
+		return renderKVTable(width, height, []sheetField{
+			{"Status", "Daemon down"},
+			{"Note", "enable netbird"},
 		})
 	case s.NeedsLogin():
-		return renderSheet(width, height, []string{
-			"  " + warnStyle.Render("Login required"),
-			"  " + dimStyle.Render("Run netbird up in a terminal to log in."),
+		return renderKVTable(width, height, []sheetField{
+			{"Status", "Login required"},
+			{"Note", "run netbird up"},
 		})
 	default:
-		fields := []sheetField{
-			{"Status", firstNonEmpty(s.DaemonStatus, "Disconnected")},
+		return renderKVTable(width, height, []sheetField{
+			{"Status", firstNonEmpty(s.DaemonStatus, statusWord(false))},
 			{"Management", s.MgmtURL},
-		}
-		return renderSheet(width, height, sheetLines(fields, innerWidth))
+		})
 	}
 }
 
 func (m model) renderWarpStatusPanel(width, height int) string {
-	innerWidth := width - 4
 	s := m.warpStatus
 
 	switch {
 	case s.Connected():
-		fields := []sheetField{
-			{"Status", "Connected"},
+		return renderKVTable(width, height, []sheetField{
+			{"Status", statusWord(true)},
 			{"Provider", "Cloudflare WARP"},
-		}
-		return renderSheet(width, height, sheetLines(fields, innerWidth))
+		})
 	case s.DaemonDown:
-		return renderSheet(width, height, []string{
-			"  " + dimStyle.Render("Daemon down"),
-			"  " + dimStyle.Render("sudo systemctl enable --now warp-svc"),
+		return renderKVTable(width, height, []sheetField{
+			{"Status", "Daemon down"},
+			{"Provider", "Cloudflare WARP"},
+			{"Note", "enable warp-svc"},
 		})
 	case s.NeedsRegistration():
-		return renderSheet(width, height, []string{
-			"  " + warnStyle.Render("Login required"),
-			"  " + dimStyle.Render("Run warp-cli registration new in a terminal."),
+		return renderKVTable(width, height, []sheetField{
+			{"Status", "Login required"},
+			{"Note", "warp-cli registration new"},
 		})
 	case s.Connecting():
-		fields := []sheetField{{"Status", "Connecting"}}
-		return renderSheet(width, height, sheetLines(fields, innerWidth))
+		return renderKVTable(width, height, []sheetField{
+			{"Status", "Connecting"},
+		})
 	default:
-		fields := []sheetField{
-			{"Status", "Disconnected"},
+		return renderKVTable(width, height, []sheetField{
+			{"Status", statusWord(false)},
 			{"Provider", "Cloudflare WARP"},
-		}
-		return renderSheet(width, height, sheetLines(fields, innerWidth))
+		})
 	}
 }
 
@@ -189,68 +186,20 @@ func firstNonEmpty(vals ...string) string {
 }
 
 func renderSheetField(label, value string) string {
-	return "  " + labelStyle.Render(label) + " " + valueStyle.Render(dash(value))
+	return dimStyle.Render(label) + "  " + valueStyle.Render(dash(value))
 }
 
-func sheetLines(fields []sheetField, innerWidth int) []string {
-	lines := []string{""}
-	if innerWidth >= 48 && len(fields) > 1 {
-		col := innerWidth / 2
-		for i := 0; i < len(fields); i += 2 {
-			left := renderSheetField(fields[i].Label, fields[i].Value)
-			if i+1 < len(fields) {
-				right := renderSheetField(fields[i+1].Label, fields[i+1].Value)
-				pad := col - lipgloss.Width(left)
-				if pad < 1 {
-					pad = 1
-				}
-				lines = append(lines, left+strings.Repeat(" ", pad)+strings.TrimLeft(right, " "))
-			} else {
-				lines = append(lines, left)
-			}
+func renderKVTable(width, height int, fields []sheetField) string {
+	inW := boxInnerWidth(width)
+	var lines []string
+	if len(fields) == 0 {
+		lines = append(lines, formatKVRow("Status", "--", inW))
+	}
+	for i, f := range fields {
+		if i == 1 {
+			lines = append(lines, "")
 		}
-		return lines
+		lines = append(lines, formatKVRow(f.Label, f.Value, inW))
 	}
-	for _, f := range fields {
-		lines = append(lines, renderSheetField(f.Label, f.Value))
-	}
-	return lines
-}
-
-type panelSize struct{ width, height int }
-
-func panelInnerSize(width, height int) panelSize {
-	return panelSize{width: max(8, width-4), height: max(3, height-2)}
-}
-
-func renderPanel(width, height int, lines []string) string {
-	inner := panelInnerSize(width, height)
-	padded := make([]string, 0, len(lines))
-	for _, line := range lines {
-		if line == "" {
-			padded = append(padded, "")
-			continue
-		}
-		if strings.HasPrefix(line, "  ") {
-			padded = append(padded, line)
-		} else {
-			padded = append(padded, "  "+line)
-		}
-	}
-	for len(padded) < inner.height {
-		padded = append(padded, "")
-	}
-	if len(padded) > inner.height {
-		padded = padded[:inner.height]
-	}
-	return panelBorderStyle.
-		Width(width - 2).
-		Height(inner.height).
-		Render(strings.Join(padded, "\n"))
-}
-
-func renderSheet(width, height int, lines []string) string {
-	body := []string{dimStyle.Render("Details"), ""}
-	body = append(body, lines...)
-	return renderPanel(width, height, body)
+	return titledBox("Details", lines, width, height)
 }

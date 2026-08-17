@@ -20,9 +20,8 @@ var (
 
 // Style variables — set by initStyles()
 var (
-	panelBorderStyle  lipgloss.Style
 	itemStyle         lipgloss.Style
-	selectedItemStyle lipgloss.Style
+	selectedNameStyle lipgloss.Style
 	labelStyle        lipgloss.Style
 	valueStyle        lipgloss.Style
 	connectedStyle    lipgloss.Style
@@ -33,23 +32,21 @@ var (
 	helpTitleStyle    lipgloss.Style
 	inputPromptStyle  lipgloss.Style
 	spinnerStyle      lipgloss.Style
+	headerRuleStyle   lipgloss.Style
 )
 
 func initStyles() {
-	panelBorderStyle = lipgloss.NewStyle().
-		Border(lipgloss.RoundedBorder()).
-		BorderForeground(borderCol)
-
 	itemStyle = lipgloss.NewStyle().
-		Foreground(textCol)
+		Foreground(textCol).
+		Bold(true)
 
-	selectedItemStyle = lipgloss.NewStyle().
+	selectedNameStyle = lipgloss.NewStyle().
 		Foreground(accent).
 		Bold(true)
 
 	labelStyle = lipgloss.NewStyle().
 		Foreground(dimCol).
-		Width(12)
+		Width(10)
 
 	valueStyle = lipgloss.NewStyle().
 		Foreground(textCol)
@@ -58,11 +55,12 @@ func initStyles() {
 	errorStyle = lipgloss.NewStyle().Foreground(red)
 	warnStyle = lipgloss.NewStyle().Foreground(yellow)
 	dimStyle = lipgloss.NewStyle().Foreground(dimCol)
+	headerRuleStyle = lipgloss.NewStyle().Foreground(borderCol)
 
 	helpOverlayStyle = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(accent).
-		Padding(1, 3)
+		BorderForeground(borderCol).
+		Padding(1, 2)
 
 	helpTitleStyle = lipgloss.NewStyle().
 		Foreground(textCol)

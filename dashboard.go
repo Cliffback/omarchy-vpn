@@ -37,47 +37,71 @@ func (m model) View() tea.View {
 		return v
 	}
 
-	// Layout: header (2) + gap (1) + panels + footer (1)
+	// header (2) + blank + panes + blank + footer
+	innerW := pageInnerWidth(m.width)
 	titleBar := m.renderTitleBar()
-	titleHeight := 3
-	bottomHeight := 1
-	panelHeight := m.height - titleHeight - bottomHeight
-	if panelHeight < 5 {
-		panelHeight = 5
-	}
 
-	// Panel widths: 40/60 split
-	leftWidth := m.width * 2 / 5
-	rightWidth := m.width - leftWidth
-
-	if leftWidth < 24 {
-		leftWidth = 24
-		rightWidth = m.width - leftWidth
-	}
-
-	// Render panels
-	left := m.renderConfigPanel(leftWidth, panelHeight)
-	right := m.renderStatusPanel(rightWidth, panelHeight)
-
-	// Join panels horizontally
-	panels := lipgloss.JoinHorizontal(lipgloss.Top, left, right)
-
-	// Bottom bar
 	var bottom string
 	if m.message != "" && time.Now().Before(m.messageExp) {
-		bottom = " " + m.message
+		bottom = m.message
 	} else {
 		m.message = ""
-		bottom = " " + dimStyle.Render("?")
+		bottom = renderKeyFooter(m.help, m.keys.ShortHelp(), innerW)
 	}
 
-	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left,
+	avail := m.height - 2 - 1 - 1 - max(1, lipgloss.Height(bottom))
+	if avail < 6 {
+		avail = 6
+	}
+	panels := m.renderPanes(innerW, avail)
+
+	body := lipgloss.JoinVertical(lipgloss.Left,
 		titleBar,
+		"",
 		panels,
+		"",
 		bottom,
-	))
+	)
+	if pad := m.width - innerW; pad > 0 {
+		body = indentBlock(body, pad/2)
+	}
+
+	v := tea.NewView(body)
 	v.AltScreen = true
 	return v
+}
+
+func (m model) renderPanes(innerW, avail int) string {
+	if useStackedLayout(m.width, m.height) {
+		topH, botH := stackPaneHeights(avail, m.tunnelContentLines())
+		return lipgloss.JoinVertical(lipgloss.Left,
+			m.renderConfigPanel(innerW, topH),
+			"",
+			m.renderStatusPanel(innerW, botH),
+		)
+	}
+
+	leftWidth := (innerW - paneGap) * 2 / 5
+	rightWidth := innerW - paneGap - leftWidth
+	if leftWidth < 32 {
+		leftWidth = 32
+		rightWidth = innerW - paneGap - leftWidth
+	}
+	if rightWidth < 20 {
+		rightWidth = 20
+		leftWidth = innerW - paneGap - rightWidth
+	}
+	left := m.renderConfigPanel(leftWidth, avail)
+	right := m.renderStatusPanel(rightWidth, avail)
+	return lipgloss.JoinHorizontal(lipgloss.Top, left, strings.Repeat(" ", paneGap), right)
+}
+
+func (m model) tunnelContentLines() int {
+	n := m.listLen()
+	if n == 0 {
+		return 1
+	}
+	return n*2 + (n - 1)
 }
 
 func (m model) sessionConnected() bool {
@@ -95,35 +119,25 @@ func (m model) sessionNames() []string {
 	return names
 }
 
-func statusWord(connected bool) string {
-	if connected {
-		return "Connected"
-	}
-	return "Disconnected"
-}
-
 func (m model) renderTitleBar() string {
-	line1 := " " + itemStyle.Render("omarchy-vpn")
+	w := pageInnerWidth(m.width)
+	name := itemStyle.Render("omarchy-vpn")
+	ver := dimStyle.Render(displayVersion())
+	pad := w - lipgloss.Width(name) - lipgloss.Width(ver)
+	if pad < 1 {
+		pad = 1
+	}
+	line1 := name + strings.Repeat(" ", pad) + ver
 
-	word := statusWord(m.sessionConnected())
-	var status string
+	st := statusWord(m.sessionConnected())
+	var line2 string
 	if m.sessionConnected() {
-		status = connectedStyle.Render(word)
+		line2 = connectedStyle.Render(st)
+		if names := strings.Join(m.sessionNames(), "  "); names != "" {
+			line2 += "  " + dimStyle.Render(names)
+		}
 	} else {
-		status = dimStyle.Render(word)
+		line2 = dimStyle.Render(st)
 	}
-
-	names := strings.Join(m.sessionNames(), "  ")
-	left := " " + status
-	if names != "" {
-		left += "    " + valueStyle.Render(names)
-	}
-	right := dimStyle.Render(displayVersion())
-	pad := m.width - lipgloss.Width(left) - lipgloss.Width(right) - 1
-	if pad < 2 {
-		pad = 2
-	}
-	line2 := left + strings.Repeat(" ", pad) + right
-
-	return line1 + "\n" + line2 + "\n"
+	return line1 + "\n" + line2
 }

@@ -1,6 +1,8 @@
 package main
 
 import (
+	"strings"
+
 	"charm.land/bubbles/v2/help"
 	"charm.land/bubbles/v2/key"
 	"charm.land/lipgloss/v2"
@@ -39,7 +41,7 @@ func newKeyMap() keyMap {
 		),
 		Import: key.NewBinding(
 			key.WithKeys("i"),
-			key.WithHelp("i", "import config"),
+			key.WithHelp("i", "import"),
 		),
 		Rename: key.NewBinding(
 			key.WithKeys("r"),
@@ -51,7 +53,7 @@ func newKeyMap() keyMap {
 		),
 		Help: key.NewBinding(
 			key.WithKeys("?"),
-			key.WithHelp("?", "toggle help"),
+			key.WithHelp("?", "help"),
 		),
 		Quit: key.NewBinding(
 			key.WithKeys("q"),
@@ -65,7 +67,7 @@ func newKeyMap() keyMap {
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Help}
+	return []key.Binding{k.Connect, k.Disconnect, k.Import, k.Help, k.Quit}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
@@ -77,10 +79,45 @@ func (k keyMap) FullHelp() [][]key.Binding {
 	}
 }
 
+func renderKeyFooter(h help.Model, bindings []key.Binding, width int) string {
+	sep := h.Styles.ShortSeparator.Inline(true).Render(h.ShortSeparator)
+	sepW := lipgloss.Width(sep)
+	var lines []string
+	var cur string
+	var curW int
+	for _, kb := range bindings {
+		if !kb.Enabled() {
+			continue
+		}
+		item := h.Styles.ShortKey.Inline(true).Render(kb.Help().Key) + " " +
+			h.Styles.ShortDesc.Inline(true).Render(kb.Help().Desc)
+		w := lipgloss.Width(item)
+		need := w
+		if curW > 0 {
+			need += sepW
+		}
+		if width > 0 && curW > 0 && curW+need > width {
+			lines = append(lines, cur)
+			cur, curW = item, w
+			continue
+		}
+		if curW > 0 {
+			cur += sep
+			curW += sepW
+		}
+		cur += item
+		curW += w
+	}
+	if cur != "" {
+		lines = append(lines, cur)
+	}
+	return strings.Join(lines, "\n")
+}
+
 func newHelp() help.Model {
 	h := help.New()
 	s := help.DefaultDarkStyles()
-	s.ShortKey = lipgloss.NewStyle().Foreground(dimCol)
+	s.ShortKey = lipgloss.NewStyle().Foreground(accent)
 	s.ShortDesc = lipgloss.NewStyle().Foreground(dimCol)
 	s.ShortSeparator = lipgloss.NewStyle().Foreground(borderCol)
 	s.FullKey = lipgloss.NewStyle().Foreground(accent)

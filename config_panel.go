@@ -1,43 +1,19 @@
 package main
 
-import (
-	"charm.land/lipgloss/v2"
-)
-
 func (m model) renderConfigPanel(width, height int) string {
-	inner := panelInnerSize(width, height)
+	inW := boxInnerWidth(width)
 	var lines []string
-	lines = append(lines, dimStyle.Render("Tunnels"))
-	lines = append(lines, "")
-
 	if m.listLen() == 0 {
 		lines = append(lines, dimStyle.Render("No configs."))
 	} else {
-		idx := 0
-		if m.netbirdAvail {
-			lines = append(lines, m.renderIndexItem(indexRow{
-				name: netbirdRowName, kind: "NetBird",
-				connected: m.netbirdStatus.Connected(), index: idx, width: inner.width,
-			})...)
-			idx++
+		for _, r := range m.indexRows() {
+			lines = append(lines, m.renderIndexItem(r, inW)...)
 		}
-		if m.warpAvail {
-			lines = append(lines, m.renderIndexItem(indexRow{
-				name: warpRowName, kind: "WARP",
-				connected: m.warpStatus.Connected(), index: idx, width: inner.width,
-			})...)
-			idx++
-		}
-		for _, cfg := range m.configs {
-			lines = append(lines, m.renderIndexItem(indexRow{
-				name: cfg, kind: "WireGuard",
-				connected: m.isActive(cfg), index: idx, width: inner.width,
-			})...)
-			idx++
+		if n := len(lines); n > 0 && lines[n-1] == "" {
+			lines = lines[:n-1]
 		}
 	}
-
-	return renderPanel(width, height, lines)
+	return titledBox("Tunnels", lines, width, height)
 }
 
 type indexRow struct {
@@ -45,12 +21,35 @@ type indexRow struct {
 	kind      string
 	connected bool
 	index     int
-	width     int
 }
 
-func (m model) renderIndexItem(row indexRow) []string {
-	selected := row.index == m.cursor
+func statusWord(connected bool) string {
+	if connected {
+		return "Connected"
+	}
+	return "Disconnected"
+}
 
+func (m model) indexRows() []indexRow {
+	var rows []indexRow
+	idx := 0
+	if m.netbirdAvail {
+		rows = append(rows, indexRow{netbirdRowName, "NetBird", m.netbirdStatus.Connected(), idx})
+		idx++
+	}
+	if m.warpAvail {
+		rows = append(rows, indexRow{warpRowName, "WARP", m.warpStatus.Connected(), idx})
+		idx++
+	}
+	for _, cfg := range m.configs {
+		rows = append(rows, indexRow{cfg, "WireGuard", m.isActive(cfg), idx})
+		idx++
+	}
+	return rows
+}
+
+func (m model) renderIndexItem(row indexRow, width int) []string {
+	selected := row.index == m.cursor
 	if selected && m.modal == modalRenaming {
 		return []string{m.renameInput.View(), ""}
 	}
@@ -61,44 +60,23 @@ func (m model) renderIndexItem(row indexRow) []string {
 		}
 	}
 
-	status := statusWord(row.connected)
-	if selected && m.modal == modalConnecting && m.connectName == row.name {
-		status = m.spinner.View()
-	}
-	name := truncate(row.name, row.width)
-	meta := row.kind + " · " + status
-
-	nameLine := name
-	metaLine := dimStyle.Render(truncate(meta, row.width))
+	name := truncate(row.name, width)
 	if selected {
-		nameLine = selectedItemStyle.Render(name)
-		if row.connected {
-			metaLine = connectedStyle.Render(truncate(meta, row.width))
-		}
-	} else if row.connected {
-		metaLine = connectedStyle.Render(truncate(meta, row.width))
+		name = selectedNameStyle.Render(name)
+	} else {
+		name = itemStyle.Render(name)
 	}
 
-	return []string{nameLine, metaLine, ""}
-}
-
-func formatIndexRow(name, status, kind string, width int) string {
-	return truncate(name, width) + "\n" + truncate(kind+" · "+status, width)
-}
-
-func truncate(s string, width int) string {
-	if width <= 0 {
-		return s
+	st := statusWord(row.connected)
+	if selected && m.modal == modalConnecting && m.connectName == row.name {
+		st = m.spinner.View()
 	}
-	if lipgloss.Width(s) <= width {
-		return s
+	meta := row.kind + " · " + st
+	var metaLine string
+	if row.connected && m.modal != modalConnecting {
+		metaLine = connectedStyle.Render(truncate(meta, width))
+	} else {
+		metaLine = dimStyle.Render(truncate(meta, width))
 	}
-	if width <= 1 {
-		return "…"
-	}
-	runes := []rune(s)
-	for lipgloss.Width(string(runes)+"…") > width && len(runes) > 0 {
-		runes = runes[:len(runes)-1]
-	}
-	return string(runes) + "…"
+	return []string{name, metaLine, ""}
 }
