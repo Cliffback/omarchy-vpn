@@ -66,9 +66,9 @@ Single Bubble Tea program with modal states instead of view routing. All UI is o
 - Config names are sanitized to `[a-zA-Z0-9_-]` only
 - Cannot rename or delete an active tunnel — must disconnect first
 - Multiple tunnels may be active at once; connecting only tears down active tunnels whose `AllowedIPs` overlap the new config's (unparseable/missing AllowedIPs are treated as overlapping, so full-tunnel switching is preserved)
-- NetBird row appears only when the `netbird` binary is installed; it coexists with WG tunnels (overlay mesh, not mutually exclusive)
+- NetBird row appears only when `netbird` is installed, the daemon is up, and a session exists; it coexists with WG tunnels (overlay mesh, not mutually exclusive)
 - `netbird up` is never run when the daemon reports NeedsLogin/SessionExpired — it would block on browser SSO
-- Cloudflare WARP row appears only when `warp-cli` is installed (`cloudflare-warp-bin`); needs the `warp-svc` daemon running (no sudo for warp-cli itself)
+- Cloudflare WARP row appears only when `warp-cli` is installed, `warp-svc` is up, and the client is registered. Installed-but-unused is hidden (no sudo for warp-cli itself)
 - WARP status is parsed from `warp-cli status` **text** (`Status update: <State>`), not `-j` JSON — the JSON schema is undocumented and drifts between releases; the text line is stable
 - `warp-cli connect` is never auto-run when the daemon is down or the client is unregistered (`warp-cli registration show` fails) — registration/Teams SSO is left to the user, mirroring the NetBird guard
 - WARP is a **full-device tunnel** (unlike NetBird's overlay): it can collide with a WG tunnel on routing/DNS. The tool warns at connect time but does **not** auto-disconnect — split-tunnel setups are legitimate

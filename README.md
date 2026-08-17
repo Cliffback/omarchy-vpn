@@ -76,8 +76,7 @@ That's the whole interface. Everything happens on one screen.
 
 | Key | Action |
 |-----|--------|
-| `Enter` | Connect to selected config |
-| `d` | Disconnect selected tunnel |
+| `Enter` | Connect or disconnect the selected tunnel |
 
 ### Config Management
 

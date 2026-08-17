@@ -129,6 +129,52 @@ func (m *model) refreshVPNState() {
 	m.vpnStatus = statuses
 }
 
+func (m *model) refreshWarp() {
+	if !WarpAvailable() {
+		m.warpAvail = false
+		m.warpStatus = WarpStatus{}
+		return
+	}
+	s := GetWarpStatus()
+	m.warpStatus = s
+	m.warpAvail = warpRowVisible(true, s)
+}
+
+func (m *model) refreshNetbird() {
+	if !NetBirdAvailable() {
+		m.netbirdAvail = false
+		m.netbirdStatus = NetBirdStatus{}
+		return
+	}
+	s, err := GetNetBirdStatus()
+	m.netbirdStatus = s
+	m.netbirdAvail = netbirdRowVisible(true, s, err)
+}
+
+func (m model) selectedRowName() string {
+	if m.netbirdSelected() {
+		return netbirdRowName
+	}
+	if m.warpSelected() {
+		return warpRowName
+	}
+	return m.selectedConfig()
+}
+
+func (m *model) restoreSelection(name string) {
+	if name != "" {
+		for _, r := range m.indexRows() {
+			if r.name == name {
+				m.cursor = r.index
+				return
+			}
+		}
+	}
+	if n := m.listLen(); m.cursor >= n {
+		m.cursor = max(0, n-1)
+	}
+}
+
 // Messages
 
 type connectDoneMsg struct {
@@ -148,7 +194,7 @@ type netbirdDoneMsg struct {
 }
 
 type warpDoneMsg struct {
-	up         bool   // true for `warp-cli connect`, false for `warp-cli disconnect`
+	up         bool // true for `warp-cli connect`, false for `warp-cli disconnect`
 	err        error
 	wgConflict string // active WG tunnel name when connecting, "" if none
 }
@@ -209,14 +255,8 @@ func initialModel() model {
 	}
 	m.refreshVPNState()
 	m.configs = ListConfigs()
-	m.netbirdAvail = NetBirdAvailable()
-	if m.netbirdAvail {
-		m.netbirdStatus, _ = GetNetBirdStatus()
-	}
-	m.warpAvail = WarpAvailable()
-	if m.warpAvail {
-		m.warpStatus = GetWarpStatus()
-	}
+	m.refreshNetbird()
+	m.refreshWarp()
 	return m
 }
 
@@ -233,19 +273,17 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return m, nil
 
 	case statusTickMsg:
+		sel := m.selectedRowName()
+		oldLen := m.listLen()
 		m.refreshVPNState()
-		if m.netbirdAvail {
-			m.netbirdStatus, _ = GetNetBirdStatus()
-		}
-		if m.warpAvail {
-			m.warpStatus = GetWarpStatus()
-		}
+		m.refreshNetbird()
+		m.refreshWarp()
 		configs := ListConfigs()
 		if len(configs) != len(m.configs) {
 			m.configs = configs
-			if m.cursor >= m.listLen() && m.cursor > 0 {
-				m.cursor = m.listLen() - 1
-			}
+		}
+		if m.listLen() != oldLen {
+			m.restoreSelection(sel)
 		}
 		return m, statusTick()
 
@@ -275,9 +313,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case netbirdDoneMsg:
 		m.modal = modalNone
-		if m.netbirdAvail {
-			m.netbirdStatus, _ = GetNetBirdStatus()
-		}
+		m.refreshNetbird()
 		if msg.err != nil {
 			m.setMessage(errorStyle.Render("  NetBird: " + msg.err.Error()))
 		} else if msg.up {
@@ -289,9 +325,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case warpDoneMsg:
 		m.modal = modalNone
-		if m.warpAvail {
-			m.warpStatus = GetWarpStatus()
-		}
+		m.refreshWarp()
 		switch {
 		case msg.err != nil:
 			m.setMessage(errorStyle.Render("  Cloudflare WARP: " + msg.err.Error()))
@@ -407,70 +441,8 @@ func (m *model) updateNormal(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 			}
 		}
 
-	case key.Matches(msg, m.keys.Connect):
-		if m.netbirdSelected() {
-			return m.connectNetbird()
-		}
-		if m.warpSelected() {
-			return m.connectWarp()
-		}
-		selected := m.selectedConfig()
-		if selected == "" {
-			break
-		}
-		if m.isActive(selected) {
-			m.setMessage(dimStyle.Render("  Already connected"))
-			break
-		}
-		m.modal = modalConnecting
-		m.connectName = selected
-		active := slices.Clone(m.activeVPNs)
-		warpUp := m.warpAvail && m.warpStatus.Connected()
-		return m, tea.Batch(m.spinner.Tick, func() tea.Msg {
-			// Only tunnels whose AllowedIPs overlap the new config need to
-			// come down first; disjoint tunnels stay connected alongside it.
-			for _, name := range conflictingVPNs(selected, active) {
-				if err := DisconnectVPN(name); err != nil {
-					return connectDoneMsg{name: selected, err: err}
-				}
-			}
-			err := ConnectVPN(selected)
-			return connectDoneMsg{name: selected, err: err, warpConflict: warpUp}
-		})
-
-	case key.Matches(msg, m.keys.Disconnect):
-		if m.netbirdSelected() {
-			if !m.netbirdStatus.Connected() {
-				break
-			}
-			return m, func() tea.Msg {
-				return netbirdDoneMsg{up: false, err: NetBirdDown()}
-			}
-		}
-		if m.warpSelected() {
-			if !m.warpStatus.Connected() {
-				break
-			}
-			return m, func() tea.Msg {
-				return warpDoneMsg{up: false, err: WarpDown()}
-			}
-		}
-		var name string
-		if sel := m.selectedConfig(); m.isActive(sel) {
-			name = sel
-		} else if len(m.activeVPNs) == 1 {
-			name = m.activeVPNs[0]
-		}
-		if name == "" {
-			if len(m.activeVPNs) > 1 {
-				m.setMessage(warnStyle.Render("  Select the tunnel to disconnect"))
-			}
-			break
-		}
-		return m, func() tea.Msg {
-			err := DisconnectVPN(name)
-			return disconnectDoneMsg{name: name, err: err}
-		}
+	case key.Matches(msg, m.keys.Toggle):
+		return m.toggleSelected()
 
 	case key.Matches(msg, m.keys.Import):
 		m.modal = modalImporting
@@ -527,6 +499,50 @@ func (m *model) updateNormal(msg tea.KeyPressMsg) (tea.Model, tea.Cmd) {
 	}
 
 	return m, nil
+}
+
+func (m *model) toggleSelected() (tea.Model, tea.Cmd) {
+	if m.netbirdSelected() {
+		if m.netbirdStatus.Connected() {
+			return m, func() tea.Msg {
+				return netbirdDoneMsg{up: false, err: NetBirdDown()}
+			}
+		}
+		return m.connectNetbird()
+	}
+	if m.warpSelected() {
+		if m.warpStatus.Connected() {
+			return m, func() tea.Msg {
+				return warpDoneMsg{up: false, err: WarpDown()}
+			}
+		}
+		return m.connectWarp()
+	}
+	selected := m.selectedConfig()
+	if selected == "" {
+		return m, nil
+	}
+	if m.isActive(selected) {
+		return m, func() tea.Msg {
+			err := DisconnectVPN(selected)
+			return disconnectDoneMsg{name: selected, err: err}
+		}
+	}
+	m.modal = modalConnecting
+	m.connectName = selected
+	active := slices.Clone(m.activeVPNs)
+	warpUp := m.warpAvail && m.warpStatus.Connected()
+	return m, tea.Batch(m.spinner.Tick, func() tea.Msg {
+		// Only tunnels whose AllowedIPs overlap the new config need to
+		// come down first; disjoint tunnels stay connected alongside it.
+		for _, name := range conflictingVPNs(selected, active) {
+			if err := DisconnectVPN(name); err != nil {
+				return connectDoneMsg{name: selected, err: err}
+			}
+		}
+		err := ConnectVPN(selected)
+		return connectDoneMsg{name: selected, err: err, warpConflict: warpUp}
+	})
 }
 
 func (m *model) connectNetbird() (tea.Model, tea.Cmd) {

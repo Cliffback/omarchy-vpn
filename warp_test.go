@@ -44,6 +44,24 @@ func TestWarpStatusPredicates(t *testing.T) {
 	}
 }
 
+func TestWarpRowVisible(t *testing.T) {
+	if warpRowVisible(false, WarpStatus{Registered: true}) {
+		t.Error("hidden when warp-cli is missing")
+	}
+	if warpRowVisible(true, WarpStatus{DaemonDown: true}) {
+		t.Error("hidden when warp-svc is down")
+	}
+	if warpRowVisible(true, WarpStatus{State: warpDisconnected, Registered: false}) {
+		t.Error("hidden when unregistered")
+	}
+	if !warpRowVisible(true, WarpStatus{State: warpDisconnected, Registered: true}) {
+		t.Error("shown when daemon is up and registered")
+	}
+	if !warpRowVisible(true, WarpStatus{State: warpConnected, Registered: true}) {
+		t.Error("shown when connected")
+	}
+}
+
 func TestWarpNeedsRegistration(t *testing.T) {
 	// Daemon down is never "needs registration".
 	if (WarpStatus{DaemonDown: true}).NeedsRegistration() {

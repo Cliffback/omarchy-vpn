@@ -119,3 +119,16 @@ func TestCursorHelpersWarpOnly(t *testing.T) {
 		t.Errorf("selectedConfig() = %q, want alpha", got)
 	}
 }
+
+func TestRestoreSelectionKeepsConfigWhenWarpDisappears(t *testing.T) {
+	m := model{netbirdAvail: true, warpAvail: true, configs: []string{"alpha", "beta"}, cursor: 2}
+	if m.selectedConfig() != "alpha" {
+		t.Fatalf("precondition: cursor 2 should be alpha, got %q", m.selectedConfig())
+	}
+	name := m.selectedRowName()
+	m.warpAvail = false
+	m.restoreSelection(name)
+	if got := m.selectedConfig(); got != "alpha" {
+		t.Errorf("after WARP hid: selectedConfig() = %q, want alpha", got)
+	}
+}

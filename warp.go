@@ -48,6 +48,13 @@ func WarpAvailable() bool {
 	return err == nil
 }
 
+// warpRowVisible is true when WARP belongs in the TUI list: the CLI is
+// installed, warp-svc is up, and the client is registered. Installed-but-
+// unused is not an option.
+func warpRowVisible(cliInstalled bool, s WarpStatus) bool {
+	return cliInstalled && !s.DaemonDown && s.Registered
+}
+
 // parseWarpStatus extracts connection state from `warp-cli status` output.
 // State detection is case-insensitive and ordered so the "connected" substring
 // inside "disconnected" never produces a false positive.

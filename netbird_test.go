@@ -1,6 +1,9 @@
 package main
 
-import "testing"
+import (
+	"errors"
+	"testing"
+)
 
 const netbirdStatusFixture = `{
   "peers": {
@@ -77,6 +80,25 @@ func TestNeedsLoginStates(t *testing.T) {
 		if (NetBirdStatus{DaemonStatus: st}).NeedsLogin() {
 			t.Errorf("NeedsLogin() true for %q", st)
 		}
+	}
+}
+
+func TestNetbirdRowVisible(t *testing.T) {
+	ok := NetBirdStatus{DaemonStatus: "Connected"}
+	if netbirdRowVisible(false, ok, nil) {
+		t.Error("hidden when netbird is missing")
+	}
+	if netbirdRowVisible(true, NetBirdStatus{}, errors.New("down")) {
+		t.Error("hidden when daemon is unreachable")
+	}
+	if netbirdRowVisible(true, NetBirdStatus{}, nil) {
+		t.Error("hidden when daemon status is empty")
+	}
+	if netbirdRowVisible(true, NetBirdStatus{DaemonStatus: netbirdNeedsLogin}, nil) {
+		t.Error("hidden when login is required")
+	}
+	if !netbirdRowVisible(true, ok, nil) {
+		t.Error("shown when daemon is up and session exists")
 	}
 }
 

@@ -48,6 +48,16 @@ func NetBirdAvailable() bool {
 	return err == nil
 }
 
+// netbirdRowVisible is true when NetBird belongs in the TUI list: the CLI
+// is installed, the daemon is up, and a session exists. NeedsLogin is not
+// an option — enroll in a terminal first.
+func netbirdRowVisible(cliInstalled bool, s NetBirdStatus, err error) bool {
+	if !cliInstalled || err != nil || s.DaemonStatus == "" {
+		return false
+	}
+	return !s.NeedsLogin()
+}
+
 func parseNetBirdStatus(data []byte) (NetBirdStatus, error) {
 	var raw struct {
 		DaemonStatus string `json:"daemonStatus"`

@@ -13,7 +13,7 @@ func TestKeyFooterWraps(t *testing.T) {
 	if strings.Count(got, "\n") < 1 {
 		t.Fatalf("expected wrapped footer, got %q", got)
 	}
-	for _, want := range []string{"enter", "disconnect", "import", "?", "quit"} {
+	for _, want := range []string{"enter", "toggle", "import", "?", "quit"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("wrapped footer missing %q in %q", want, got)
 		}
@@ -26,7 +26,7 @@ func TestShortHelpContents(t *testing.T) {
 	h := newHelp()
 	h.SetWidth(200)
 	view := h.ShortHelpView(newKeyMap().ShortHelp())
-	for _, want := range []string{"enter", "connect", "disconnect", "import", "?"} {
+	for _, want := range []string{"enter", "toggle", "import", "?"} {
 		if !strings.Contains(view, want) {
 			t.Errorf("short help missing %q in %q", want, view)
 		}
