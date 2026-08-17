@@ -1,139 +1,104 @@
 package main
 
 import (
-	"fmt"
-	"strings"
+	"charm.land/lipgloss/v2"
 )
 
 func (m model) renderConfigPanel(width, height int) string {
-	contentHeight := height - 2
-
-	// Panel title
-	var title string
-	count := len(m.configs)
-	if count > 0 {
-		title = panelTitleStyle.Render(fmt.Sprintf("Configs (%d)", count))
-	} else {
-		title = panelTitleDimStyle.Render("Configs")
-	}
-	_ = title
-
+	inner := panelInnerSize(width, height)
 	var lines []string
+	lines = append(lines, dimStyle.Render("Tunnels"))
+	lines = append(lines, "")
 
 	if m.listLen() == 0 {
-		lines = append(lines, "")
-		lines = append(lines, dimStyle.Render("  No configs found."))
-		lines = append(lines, dimStyle.Render("  Press "+shortcutKeyStyle.Render("i")+" to import."))
+		lines = append(lines, dimStyle.Render("No configs."))
 	} else {
-		lines = append(lines, "") // top padding
 		idx := 0
 		if m.netbirdAvail {
-			lines = append(lines, m.renderPinnedItem(netbirdRowName, m.netbirdStatus.Connected(), idx, width-4))
+			lines = append(lines, m.renderIndexItem(indexRow{
+				name: netbirdRowName, kind: "NetBird",
+				connected: m.netbirdStatus.Connected(), index: idx, width: inner.width,
+			})...)
 			idx++
 		}
 		if m.warpAvail {
-			lines = append(lines, m.renderPinnedItem(warpRowName, m.warpStatus.Connected(), idx, width-4))
+			lines = append(lines, m.renderIndexItem(indexRow{
+				name: warpRowName, kind: "WARP",
+				connected: m.warpStatus.Connected(), index: idx, width: inner.width,
+			})...)
 			idx++
 		}
 		for _, cfg := range m.configs {
-			lines = append(lines, m.renderConfigItem(cfg, idx, width-4))
+			lines = append(lines, m.renderIndexItem(indexRow{
+				name: cfg, kind: "WireGuard",
+				connected: m.isActive(cfg), index: idx, width: inner.width,
+			})...)
 			idx++
 		}
-		if len(m.configs) == 0 {
-			lines = append(lines, "")
-			lines = append(lines, dimStyle.Render("  No configs found."))
-			lines = append(lines, dimStyle.Render("  Press "+shortcutKeyStyle.Render("i")+" to import."))
+	}
+
+	return renderPanel(width, height, lines)
+}
+
+type indexRow struct {
+	name      string
+	kind      string
+	connected bool
+	index     int
+	width     int
+}
+
+func (m model) renderIndexItem(row indexRow) []string {
+	selected := row.index == m.cursor
+
+	if selected && m.modal == modalRenaming {
+		return []string{m.renameInput.View(), ""}
+	}
+	if selected && m.modal == modalDeleting {
+		return []string{
+			errorStyle.Render("Delete "+row.name+"?") + " " + dimStyle.Render("[y/n]"),
+			"",
 		}
 	}
 
-	// Pad to fill height
-	for len(lines) < contentHeight {
-		lines = append(lines, "")
+	status := statusWord(row.connected)
+	if selected && m.modal == modalConnecting && m.connectName == row.name {
+		status = m.spinner.View()
 	}
-	if len(lines) > contentHeight {
-		lines = lines[:contentHeight]
+	name := truncate(row.name, row.width)
+	meta := row.kind + " · " + status
+
+	nameLine := name
+	metaLine := dimStyle.Render(truncate(meta, row.width))
+	if selected {
+		nameLine = selectedItemStyle.Render(name)
+		if row.connected {
+			metaLine = connectedStyle.Render(truncate(meta, row.width))
+		}
+	} else if row.connected {
+		metaLine = connectedStyle.Render(truncate(meta, row.width))
 	}
 
-	content := strings.Join(lines, "\n")
-
-	// Choose border style based on connection state
-	border := activeBorderStyle
-	if len(m.activeVPNs) > 0 || m.netbirdStatus.Connected() || m.warpStatus.Connected() {
-		border = connectedBorderStyle
-	}
-
-	return border.
-		Width(width - 2).
-		Height(contentHeight).
-		Render(content)
+	return []string{nameLine, metaLine, ""}
 }
 
-func (m model) renderConfigItem(name string, index, maxWidth int) string {
-	isActive := m.isActive(name)
-	isSelected := index == m.cursor
-
-	// Handle inline modals
-	if isSelected && m.modal == modalRenaming {
-		return inputPromptStyle.Render("  ▸ ") + m.renameInput.View()
-	}
-
-	if isSelected && m.modal == modalDeleting {
-		prompt := fmt.Sprintf("  ▸ Delete %s? ", name)
-		return errorStyle.Render(prompt) + dimStyle.Render("[y/n]")
-	}
-
-	if isSelected && m.modal == modalConnecting && m.connectName == name {
-		return "  " + selectedItemStyle.Render("▸ ") +
-			m.spinner.View() + " " +
-			selectedItemStyle.Render(name)
-	}
-
-	// Normal rendering
-	var parts strings.Builder
-
-	if isSelected {
-		parts.WriteString("  ")
-		parts.WriteString(selectedItemStyle.Render("▸ "))
-		parts.WriteString(selectedItemStyle.Render(name))
-	} else {
-		parts.WriteString("    ")
-		parts.WriteString(itemStyle.Render(name))
-	}
-
-	if isActive {
-		parts.WriteString(" ")
-		parts.WriteString(connectedIndicator)
-	}
-
-	return parts.String()
+func formatIndexRow(name, status, kind string, width int) string {
+	return truncate(name, width) + "\n" + truncate(kind+" · "+status, width)
 }
 
-// renderPinnedItem renders a pinned daemon row (NetBird, WARP) — same shape as
-// a config row but driven by an explicit name and connected state rather than
-// the WireGuard active-VPN tracking.
-func (m model) renderPinnedItem(name string, connected bool, index, maxWidth int) string {
-	isSelected := index == m.cursor
-
-	if isSelected && m.modal == modalConnecting && m.connectName == name {
-		return "  " + selectedItemStyle.Render("▸ ") +
-			m.spinner.View() + " " +
-			selectedItemStyle.Render(name)
+func truncate(s string, width int) string {
+	if width <= 0 {
+		return s
 	}
-
-	var parts strings.Builder
-	if isSelected {
-		parts.WriteString("  ")
-		parts.WriteString(selectedItemStyle.Render("▸ "))
-		parts.WriteString(selectedItemStyle.Render(name))
-	} else {
-		parts.WriteString("    ")
-		parts.WriteString(itemStyle.Render(name))
+	if lipgloss.Width(s) <= width {
+		return s
 	}
-
-	if connected {
-		parts.WriteString(" ")
-		parts.WriteString(connectedIndicator)
+	if width <= 1 {
+		return "…"
 	}
-
-	return parts.String()
+	runes := []rune(s)
+	for lipgloss.Width(string(runes)+"…") > width && len(runes) > 0 {
+		runes = runes[:len(runes)-1]
+	}
+	return string(runes) + "…"
 }

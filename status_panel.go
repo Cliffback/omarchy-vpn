@@ -18,6 +18,11 @@ type ConfigInfo struct {
 	AllowedIPs []string // one entry per AllowedIPs line, possibly comma-separated
 }
 
+type sheetField struct {
+	Label string
+	Value string
+}
+
 // ParseConfigFile reads a WireGuard .conf file and extracts display fields.
 func ParseConfigFile(name string) ConfigInfo {
 	path := fmt.Sprintf("/etc/wireguard/%s.conf", name)
@@ -65,225 +70,187 @@ func (m model) renderStatusPanel(width, height int) string {
 		return m.renderWarpStatusPanel(width, height)
 	}
 
-	innerWidth := width - 4 // border + padding
-	contentHeight := height - 2
-
-	var lines []string
-	var border lipgloss.Style
-
-	if name := m.selectedConfig(); name != "" && m.isActive(name) {
-		border = connectedBorderStyle
-
-		lines = append(lines, "")
-
-		s := m.vpnStatus[name]
-
-		// Connection badge
-		badge := lipgloss.NewStyle().
-			Foreground(green).
-			Bold(true).
-			Render("  ● Connected")
-		lines = append(lines, badge)
-		lines = append(lines, "")
-
-		if s.Endpoint != "" {
-			lines = append(lines, renderField("󰖟", "Endpoint", s.Endpoint, innerWidth))
-		}
-
-		info := ParseConfigFile(name)
-		if info.Address != "" {
-			lines = append(lines, renderField("󰩟", "Address", info.Address, innerWidth))
-		}
-
-		if s.TransferRx != "" {
-			lines = append(lines, renderField("↓", "Download", s.TransferRx, innerWidth))
-			lines = append(lines, renderField("↑", "Upload", s.TransferTx, innerWidth))
-		}
-
-		if s.Handshake != "" {
-			lines = append(lines, renderField("󰅐", "Handshake", s.Handshake, innerWidth))
-		}
-
-		lines = append(lines, "")
-		lines = append(lines, renderField("󰈔", "Config", name, innerWidth))
-		lines = append(lines, renderField("󰉋", "Path", fmt.Sprintf("/etc/wireguard/%s.conf", name), innerWidth))
-
-	} else if name != "" {
-		// Static preview of highlighted config
-		border = inactiveBorderStyle
-
-		info := ParseConfigFile(name)
-
-		lines = append(lines, "")
-
-		badge := dimStyle.Render("  ○ Not connected")
-		lines = append(lines, badge)
-		lines = append(lines, "")
-
-		if info.Address != "" {
-			lines = append(lines, renderField("󰩟", "Address", info.Address, innerWidth))
-		}
-		if info.DNS != "" {
-			lines = append(lines, renderField("󰇖", "DNS", info.DNS, innerWidth))
-		}
-		if info.Endpoint != "" {
-			lines = append(lines, renderField("󰖟", "Endpoint", info.Endpoint, innerWidth))
-		}
-		if info.PeerKey != "" {
-			key := info.PeerKey
-			if len(key) > 24 {
-				key = key[:24] + "…"
-			}
-			lines = append(lines, renderField("󰌆", "Peer", key, innerWidth))
-		}
-
-		lines = append(lines, "")
-		lines = append(lines, renderField("󰈔", "Config", name, innerWidth))
-		lines = append(lines, renderField("󰉋", "Path", fmt.Sprintf("/etc/wireguard/%s.conf", name), innerWidth))
-	} else {
-		border = inactiveBorderStyle
-		lines = append(lines, "")
-		lines = append(lines, dimStyle.Render("  No configs available."))
-		lines = append(lines, dimStyle.Render("  Press i to import."))
+	innerWidth := width - 4
+	name := m.selectedConfig()
+	if name == "" {
+		return renderSheet(width, height, []string{dimStyle.Render("  No configs.")})
 	}
 
-	// Pad to fill height
-	for len(lines) < contentHeight {
-		lines = append(lines, "")
-	}
-	if len(lines) > contentHeight {
-		lines = lines[:contentHeight]
+	info := ParseConfigFile(name)
+	s := m.vpnStatus[name]
+	up := m.isActive(name)
+	peer := info.PeerKey
+	if len(peer) > 24 {
+		peer = peer[:24] + "…"
 	}
 
-	content := strings.Join(lines, "\n")
+	fields := []sheetField{
+		{"Status", statusWord(up)},
+		{"Address", info.Address},
+		{"DNS", info.DNS},
+		{"Endpoint", firstNonEmpty(s.Endpoint, info.Endpoint)},
+		{"Peer", peer},
+	}
+	if up {
+		fields = append(fields,
+			sheetField{"Download", s.TransferRx},
+			sheetField{"Upload", s.TransferTx},
+			sheetField{"Handshake", s.Handshake},
+		)
+	}
+	fields = append(fields, sheetField{"Path", fmt.Sprintf("/etc/wireguard/%s.conf", name)})
 
-	return border.
-		Width(width - 2).
-		Height(contentHeight).
-		Render(content)
+	return renderSheet(width, height, sheetLines(fields, innerWidth))
 }
 
 func (m model) renderNetbirdStatusPanel(width, height int) string {
 	innerWidth := width - 4
-	contentHeight := height - 2
-
-	var lines []string
-	var border lipgloss.Style
 	s := m.netbirdStatus
-
-	lines = append(lines, "")
 
 	switch {
 	case s.Connected():
-		border = connectedBorderStyle
-		badge := lipgloss.NewStyle().
-			Foreground(green).
-			Bold(true).
-			Render("  ● Connected")
-		lines = append(lines, badge, "")
-		if s.IP != "" {
-			lines = append(lines, renderField("󰩟", "Address", s.IP, innerWidth))
+		fields := []sheetField{
+			{"Status", "Connected"},
+			{"Address", s.IP},
+			{"FQDN", s.FQDN},
+			{"Peers", fmt.Sprintf("%d/%d connected", s.PeersConnected, s.PeersTotal)},
+			{"Download", formatBytes(s.TransferRx)},
+			{"Upload", formatBytes(s.TransferTx)},
+			{"Management", s.MgmtURL},
 		}
-		if s.FQDN != "" {
-			lines = append(lines, renderField("󰖟", "FQDN", s.FQDN, innerWidth))
-		}
-		lines = append(lines, renderField("󰀂", "Peers", fmt.Sprintf("%d/%d connected", s.PeersConnected, s.PeersTotal), innerWidth))
-		lines = append(lines, renderField("↓", "Download", formatBytes(s.TransferRx), innerWidth))
-		lines = append(lines, renderField("↑", "Upload", formatBytes(s.TransferTx), innerWidth))
-		if s.MgmtURL != "" {
-			lines = append(lines, "")
-			lines = append(lines, renderField("󰖟", "Management", s.MgmtURL, innerWidth))
-		}
-
+		return renderSheet(width, height, sheetLines(fields, innerWidth))
 	case s.DaemonStatus == "":
-		border = inactiveBorderStyle
-		lines = append(lines, dimStyle.Render("  ○ Daemon not running"), "")
-		lines = append(lines, dimStyle.Render("  sudo systemctl enable --now netbird"))
-
+		return renderSheet(width, height, []string{
+			"  " + dimStyle.Render(statusWord(false)),
+			"  " + dimStyle.Render("Daemon down"),
+			"  " + dimStyle.Render("sudo systemctl enable --now netbird"),
+		})
 	case s.NeedsLogin():
-		border = inactiveBorderStyle
-		lines = append(lines, warnStyle.Render("  ○ Login required"), "")
-		lines = append(lines, dimStyle.Render("  Run `netbird up` in a terminal to log in."))
-
-	default: // Idle, Connecting, or unknown future states
-		border = inactiveBorderStyle
-		lines = append(lines, dimStyle.Render("  ○ Not connected"), "")
-		lines = append(lines, renderField("󰒓", "Status", s.DaemonStatus, innerWidth))
-		if s.MgmtURL != "" {
-			lines = append(lines, renderField("󰖟", "Management", s.MgmtURL, innerWidth))
+		return renderSheet(width, height, []string{
+			"  " + warnStyle.Render("Login required"),
+			"  " + dimStyle.Render("Run netbird up in a terminal to log in."),
+		})
+	default:
+		fields := []sheetField{
+			{"Status", firstNonEmpty(s.DaemonStatus, "Disconnected")},
+			{"Management", s.MgmtURL},
 		}
+		return renderSheet(width, height, sheetLines(fields, innerWidth))
 	}
-
-	for len(lines) < contentHeight {
-		lines = append(lines, "")
-	}
-	if len(lines) > contentHeight {
-		lines = lines[:contentHeight]
-	}
-
-	return border.
-		Width(width - 2).
-		Height(contentHeight).
-		Render(strings.Join(lines, "\n"))
 }
 
 func (m model) renderWarpStatusPanel(width, height int) string {
 	innerWidth := width - 4
-	contentHeight := height - 2
-
-	var lines []string
-	var border lipgloss.Style
 	s := m.warpStatus
-
-	lines = append(lines, "")
 
 	switch {
 	case s.Connected():
-		border = connectedBorderStyle
-		badge := lipgloss.NewStyle().
-			Foreground(green).
-			Bold(true).
-			Render("  ● Connected")
-		lines = append(lines, badge, "")
-		lines = append(lines, renderField("󰖟", "Provider", "Cloudflare WARP", innerWidth))
-
+		fields := []sheetField{
+			{"Status", "Connected"},
+			{"Provider", "Cloudflare WARP"},
+		}
+		return renderSheet(width, height, sheetLines(fields, innerWidth))
 	case s.DaemonDown:
-		border = inactiveBorderStyle
-		lines = append(lines, dimStyle.Render("  ○ Daemon not running"), "")
-		lines = append(lines, dimStyle.Render("  sudo systemctl enable --now warp-svc"))
-
+		return renderSheet(width, height, []string{
+			"  " + dimStyle.Render("Daemon down"),
+			"  " + dimStyle.Render("sudo systemctl enable --now warp-svc"),
+		})
 	case s.NeedsRegistration():
-		border = inactiveBorderStyle
-		lines = append(lines, warnStyle.Render("  ○ Registration required"), "")
-		lines = append(lines, dimStyle.Render("  Run `warp-cli registration new`, or enroll via"))
-		lines = append(lines, dimStyle.Render("  your Zero Trust org, in a terminal."))
-
+		return renderSheet(width, height, []string{
+			"  " + warnStyle.Render("Login required"),
+			"  " + dimStyle.Render("Run warp-cli registration new in a terminal."),
+		})
 	case s.Connecting():
-		border = inactiveBorderStyle
-		lines = append(lines, dimStyle.Render("  ○ Connecting…"))
-
-	default: // Disconnected, No network, or unknown future states
-		border = inactiveBorderStyle
-		lines = append(lines, dimStyle.Render("  ○ Not connected"), "")
-		lines = append(lines, dimStyle.Render("  Press enter to connect."))
+		fields := []sheetField{{"Status", "Connecting"}}
+		return renderSheet(width, height, sheetLines(fields, innerWidth))
+	default:
+		fields := []sheetField{
+			{"Status", "Disconnected"},
+			{"Provider", "Cloudflare WARP"},
+		}
+		return renderSheet(width, height, sheetLines(fields, innerWidth))
 	}
-
-	for len(lines) < contentHeight {
-		lines = append(lines, "")
-	}
-	if len(lines) > contentHeight {
-		lines = lines[:contentHeight]
-	}
-
-	return border.
-		Width(width - 2).
-		Height(contentHeight).
-		Render(strings.Join(lines, "\n"))
 }
 
-func renderField(icon, label, value string, maxWidth int) string {
-	iconStyled := lipgloss.NewStyle().Foreground(dimCol).Render("  " + icon + " ")
-	labelStyled := labelStyle.Render(label)
-	valueStyled := valueStyle.Render(value)
-	return iconStyled + labelStyled + valueStyled
+func dash(s string) string {
+	if strings.TrimSpace(s) == "" {
+		return "--"
+	}
+	return s
+}
+
+func firstNonEmpty(vals ...string) string {
+	for _, v := range vals {
+		if strings.TrimSpace(v) != "" {
+			return v
+		}
+	}
+	return ""
+}
+
+func renderSheetField(label, value string) string {
+	return "  " + labelStyle.Render(label) + " " + valueStyle.Render(dash(value))
+}
+
+func sheetLines(fields []sheetField, innerWidth int) []string {
+	lines := []string{""}
+	if innerWidth >= 48 && len(fields) > 1 {
+		col := innerWidth / 2
+		for i := 0; i < len(fields); i += 2 {
+			left := renderSheetField(fields[i].Label, fields[i].Value)
+			if i+1 < len(fields) {
+				right := renderSheetField(fields[i+1].Label, fields[i+1].Value)
+				pad := col - lipgloss.Width(left)
+				if pad < 1 {
+					pad = 1
+				}
+				lines = append(lines, left+strings.Repeat(" ", pad)+strings.TrimLeft(right, " "))
+			} else {
+				lines = append(lines, left)
+			}
+		}
+		return lines
+	}
+	for _, f := range fields {
+		lines = append(lines, renderSheetField(f.Label, f.Value))
+	}
+	return lines
+}
+
+type panelSize struct{ width, height int }
+
+func panelInnerSize(width, height int) panelSize {
+	return panelSize{width: max(8, width-4), height: max(3, height-2)}
+}
+
+func renderPanel(width, height int, lines []string) string {
+	inner := panelInnerSize(width, height)
+	padded := make([]string, 0, len(lines))
+	for _, line := range lines {
+		if line == "" {
+			padded = append(padded, "")
+			continue
+		}
+		if strings.HasPrefix(line, "  ") {
+			padded = append(padded, line)
+		} else {
+			padded = append(padded, "  "+line)
+		}
+	}
+	for len(padded) < inner.height {
+		padded = append(padded, "")
+	}
+	if len(padded) > inner.height {
+		padded = padded[:inner.height]
+	}
+	return panelBorderStyle.
+		Width(width - 2).
+		Height(inner.height).
+		Render(strings.Join(padded, "\n"))
+}
+
+func renderSheet(width, height int, lines []string) string {
+	body := []string{dimStyle.Render("Details"), ""}
+	body = append(body, lines...)
+	return renderPanel(width, height, body)
 }

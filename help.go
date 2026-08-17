@@ -65,7 +65,7 @@ func newKeyMap() keyMap {
 }
 
 func (k keyMap) ShortHelp() []key.Binding {
-	return []key.Binding{k.Connect, k.Disconnect, k.Import, k.Rename, k.Delete, k.Help, k.Quit}
+	return []key.Binding{k.Help}
 }
 
 func (k keyMap) FullHelp() [][]key.Binding {
@@ -80,10 +80,10 @@ func (k keyMap) FullHelp() [][]key.Binding {
 func newHelp() help.Model {
 	h := help.New()
 	s := help.DefaultDarkStyles()
-	s.ShortKey = lipgloss.NewStyle().Foreground(accent).Bold(true)
+	s.ShortKey = lipgloss.NewStyle().Foreground(dimCol)
 	s.ShortDesc = lipgloss.NewStyle().Foreground(dimCol)
 	s.ShortSeparator = lipgloss.NewStyle().Foreground(borderCol)
-	s.FullKey = lipgloss.NewStyle().Foreground(accent).Bold(true)
+	s.FullKey = lipgloss.NewStyle().Foreground(accent)
 	s.FullDesc = lipgloss.NewStyle().Foreground(textCol)
 	s.FullSeparator = lipgloss.NewStyle().Foreground(borderCol)
 	h.Styles = s

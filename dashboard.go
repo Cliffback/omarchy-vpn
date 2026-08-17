@@ -24,9 +24,9 @@ func (m model) View() tea.View {
 	if m.modal == modalHelp {
 		helpView := m.help.View(m.keys)
 		overlay := helpOverlayStyle.Render(
-			helpTitleStyle.Render("󰋖  Keyboard Shortcuts") + "\n\n" +
+			helpTitleStyle.Render("Keyboard shortcuts") + "\n\n" +
 				helpView + "\n\n" +
-				dimStyle.Render("omarchy-vpn "+displayVersion()+" · Press any key to close"),
+				dimStyle.Render("omarchy-vpn "+displayVersion()+" · any key closes"),
 		)
 		v := tea.NewView(lipgloss.Place(
 			m.width, m.height,
@@ -37,10 +37,10 @@ func (m model) View() tea.View {
 		return v
 	}
 
-	// Layout: title bar (1) + gap (1) + panels + gap (1) + bottom bar (1)
+	// Layout: header (2) + gap (1) + panels + footer (1)
 	titleBar := m.renderTitleBar()
-	titleHeight := 2  // title + gap
-	bottomHeight := 2 // gap + shortcuts
+	titleHeight := 3
+	bottomHeight := 1
 	panelHeight := m.height - titleHeight - bottomHeight
 	if panelHeight < 5 {
 		panelHeight = 5
@@ -68,7 +68,7 @@ func (m model) View() tea.View {
 		bottom = " " + m.message
 	} else {
 		m.message = ""
-		bottom = " " + m.help.View(m.keys)
+		bottom = " " + dimStyle.Render("?")
 	}
 
 	v := tea.NewView(lipgloss.JoinVertical(lipgloss.Left,
@@ -80,33 +80,50 @@ func (m model) View() tea.View {
 	return v
 }
 
-func (m model) renderTitleBar() string {
-	// Mirror the waybar tray glyph: shield-check when up, shield-off when down.
-	glyph := "󰳌"
-	if len(m.activeVPNs) > 0 || m.netbirdStatus.Connected() || m.warpStatus.Connected() {
-		glyph = "󰦝"
-	}
-	icon := titleStyle.Render(glyph + " ")
-	name := titleStyle.Render("omarchy-vpn")
-	ver := titleAccentStyle.Render(" " + displayVersion())
+func (m model) sessionConnected() bool {
+	return len(m.activeVPNs) > 0 || m.netbirdStatus.Connected() || m.warpStatus.Connected()
+}
 
-	sep := titleAccentStyle.Render("  ─  ")
-	var badges []string
-	for _, vpn := range m.activeVPNs {
-		badges = append(badges, connectedStyle.Render("● "+vpn))
-	}
+func (m model) sessionNames() []string {
+	names := append([]string{}, m.activeVPNs...)
 	if m.netbirdStatus.Connected() {
-		badges = append(badges, connectedStyle.Render("● NetBird"))
+		names = append(names, "NetBird")
 	}
 	if m.warpStatus.Connected() {
-		badges = append(badges, connectedStyle.Render("● Cloudflare WARP"))
+		names = append(names, "Cloudflare WARP")
 	}
+	return names
+}
+
+func statusWord(connected bool) string {
+	if connected {
+		return "Connected"
+	}
+	return "Disconnected"
+}
+
+func (m model) renderTitleBar() string {
+	line1 := " " + itemStyle.Render("omarchy-vpn")
+
+	word := statusWord(m.sessionConnected())
 	var status string
-	if len(badges) > 0 {
-		status = sep + strings.Join(badges, "  ")
+	if m.sessionConnected() {
+		status = connectedStyle.Render(word)
 	} else {
-		status = sep + dimStyle.Render("○ disconnected")
+		status = dimStyle.Render(word)
 	}
 
-	return " " + icon + name + ver + status + "\n"
+	names := strings.Join(m.sessionNames(), "  ")
+	left := " " + status
+	if names != "" {
+		left += "    " + valueStyle.Render(names)
+	}
+	right := dimStyle.Render(displayVersion())
+	pad := m.width - lipgloss.Width(left) - lipgloss.Width(right) - 1
+	if pad < 2 {
+		pad = 2
+	}
+	line2 := left + strings.Repeat(" ", pad) + right
+
+	return line1 + "\n" + line2 + "\n"
 }

@@ -11,12 +11,12 @@ func TestShortHelpContents(t *testing.T) {
 	h := newHelp()
 	h.SetWidth(200)
 	view := h.ShortHelpView(newKeyMap().ShortHelp())
-	for _, want := range []string{"delete config", "rename config", "•"} {
-		if !strings.Contains(view, want) {
-			t.Errorf("short help missing %q", want)
-		}
+	if !strings.Contains(view, "?") {
+		t.Errorf("short help missing %q in %q", "?", view)
 	}
-	if strings.Contains(view, "│") {
-		t.Errorf("short help still contains pipe separator")
+	for _, stale := range []string{"delete config", "rename config", "enter", "│"} {
+		if strings.Contains(view, stale) {
+			t.Errorf("short help still contains %q: %s", stale, view)
+		}
 	}
 }
