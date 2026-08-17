@@ -19,6 +19,9 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
+      - name: Require upload helper
+        run: test -x .forgejo/upload-asset.sh || chmod +x .forgejo/upload-asset.sh
+
       - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
@@ -39,7 +42,6 @@ jobs:
           FORGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
         run: |
-          chmod +x .forgejo/upload-asset.sh
           .forgejo/upload-asset.sh dist/omarchy-vpn-linux-amd64
           .forgejo/upload-asset.sh dist/omarchy-vpn-linux-arm64
           .forgejo/upload-asset.sh dist/SHA256SUMS
