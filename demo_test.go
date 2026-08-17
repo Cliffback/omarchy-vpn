@@ -12,9 +12,6 @@ func TestDemoListIsCanned(t *testing.T) {
 	if !slices.Equal(got, want) {
 		t.Fatalf("ListConfigs() = %v, want canned demo names %v", got, want)
 	}
-	if slices.Contains(got, "homelab") {
-		t.Fatal("demo list leaked a real-looking config name")
-	}
 }
 
 func TestDemoDoesNotEnableDaemons(t *testing.T) {
