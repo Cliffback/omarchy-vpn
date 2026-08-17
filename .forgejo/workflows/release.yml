@@ -34,10 +34,12 @@ jobs:
           CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags "-s -w -X main.version=$VERSION" -o dist/omarchy-vpn-linux-arm64 .
           cd dist && sha256sum * > SHA256SUMS && cat SHA256SUMS
 
-      - name: Publish release
-        uses: actions/forgejo-release@v2
-        with:
-          direction: upload
-          release-dir: dist
-          token: ${{ secrets.GITHUB_TOKEN }}
-          tag: ${{ github.event.inputs.tag || github.ref_name }}
+      - name: Attach binaries
+        env:
+          FORGE_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_TAG: ${{ github.event.inputs.tag || github.ref_name }}
+        run: |
+          chmod +x .forgejo/upload-asset.sh
+          .forgejo/upload-asset.sh dist/omarchy-vpn-linux-amd64
+          .forgejo/upload-asset.sh dist/omarchy-vpn-linux-arm64
+          .forgejo/upload-asset.sh dist/SHA256SUMS
