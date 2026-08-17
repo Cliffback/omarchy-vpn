@@ -31,7 +31,7 @@
 - **Catppuccin Mocha** — terminal colors with nerd font icons
 - **Persistent connections** — quit the TUI, VPN stays connected
 - **NetBird aware** — if NetBird is installed, toggle it from the same dashboard alongside your WireGuard tunnels
-- **Waybar integration** — status icon with connection details tooltip, click to launch TUI
+- **Bar integration** — status icon with connection details tooltip, click to launch TUI (Waybar on Omarchy 3, Omarchy shell on Omarchy 4)
 - **Zero config** — passwordless via sudoers, just run `omarchy-vpn`
 
 ## Installation
@@ -108,15 +108,19 @@ sudo cp *.conf /etc/wireguard/
 sudo chmod 600 /etc/wireguard/*.conf
 ```
 
-## Waybar
+## Status bar
 
-The package automatically adds a VPN status module to waybar on install and removes it on uninstall. The icon shows connection state and the tooltip displays endpoint and transfer stats. Click to launch the TUI.
+Install adds a VPN status icon to the desktop bar. The icon shows connection state and the tooltip displays endpoint and transfer stats. Click to launch the TUI.
 
-If you need to manually manage the waybar module:
+- **Omarchy 3** — Waybar `custom/vpn` module
+- **Omarchy 4** — `limehawk.vpn` shell widget (Quickshell). Upgrading from 3 strips the old Waybar hooks and enables the new widget.
+- **Neither** — setup is a no-op; the TUI still works
 
 ```bash
-omarchy-vpn --setup-waybar    # Add module to waybar config + style
-omarchy-vpn --remove-waybar   # Remove module from waybar config + style
+omarchy-vpn --setup            # Detect 3 vs 4 and install the matching bar hook
+omarchy-vpn --remove           # Remove whichever hook is present
+omarchy-vpn --setup-waybar     # Force the Omarchy 3 Waybar path
+omarchy-vpn --remove-waybar    # Force-remove the Waybar module
 ```
 
 ## How It Works

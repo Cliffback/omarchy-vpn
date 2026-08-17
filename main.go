@@ -31,14 +31,8 @@ func main() {
 		case "--waybar":
 			printWaybarStatus()
 			return
-		case "--setup-waybar":
-			if err := setupWaybar(); err != nil {
-				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
-				os.Exit(1)
-			}
-			return
-		case "--remove-waybar":
-			if err := removeWaybar(); err != nil {
+		case "--setup", "--setup-waybar", "--remove", "--remove-waybar":
+			if err := runDesktopFlag(os.Args[1]); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}

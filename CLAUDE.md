@@ -40,7 +40,9 @@ Single Bubble Tea program with modal states instead of view routing. All UI is o
 | `wireguard.go` | Backend — config name validation + all `sudo` exec calls to wg-quick/wg |
 | `netbird.go` | NetBird backend — `netbird status --json` parsing + up/down (no sudo, talks to daemon) |
 | `warp.go` | Cloudflare WARP backend — `warp-cli status` **text** parsing + connect/disconnect (no sudo, talks to daemon) |
-| `waybar.go` | Waybar module — `--waybar` JSON output + `--setup`/`--remove` config management |
+| `desktop.go` | Detect Omarchy 3 vs 4 and dispatch `--setup` / `--remove` |
+| `plugin.go` | Omarchy 4 shell widget — embed `plugin/`, write `~/.config/omarchy/plugins/limehawk.vpn`, patch `shell.json` |
+| `waybar.go` | Waybar module — `--waybar` JSON output + Omarchy 3 `--setup-waybar` / `--remove-waybar` |
 | `styles.go` | Semantic color variables + all lipgloss styles (initialized by `initStyles()`) |
 | `theme.go` | ANSI terminal color assignments → `initColors()` → `initStyles()` |
 | `help.go` | `keyMap` with `key.Binding` definitions, `help.Model` with custom styles |
@@ -71,6 +73,8 @@ Single Bubble Tea program with modal states instead of view routing. All UI is o
 - `warp-cli connect` is never auto-run when the daemon is down or the client is unregistered (`warp-cli registration show` fails) — registration/Teams SSO is left to the user, mirroring the NetBird guard
 - WARP is a **full-device tunnel** (unlike NetBird's overlay): it can collide with a WG tunnel on routing/DNS. The tool warns at connect time but does **not** auto-disconnect — split-tunnel setups are legitimate
 - WARP transfer stats are not shown yet — `warp-cli stats` output format is unverified; pin it from a live connected capture before parsing (avoid guessed numbers)
+- Omarchy 4 has no Waybar. `--setup` writes the `limehawk.vpn` shell plugin (`omarchy.*` is reserved) and enables it in `shell.json`. `--setup-waybar` stays as the Omarchy 3 path for people who have not upgraded.
+- Third-party plugin folders cannot contain symlinks; `writePlugin` copies files. Window float on 4 uses `--app-id=TUI.float` so we do not edit `hyprland.lua`.
 
 ## AUR Publishing
 

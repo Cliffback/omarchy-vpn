@@ -1,0 +1,22 @@
+{
+  "schemaVersion": 1,
+  "id": "limehawk.vpn",
+  "name": "omarchy-vpn",
+  "version": "0.4.0",
+  "author": "Limehawk",
+  "license": "MIT",
+  "description": "VPN status from omarchy-vpn. Click to open the TUI.",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "BarWidget.qml"
+  },
+  "barWidget": {
+    "displayName": "VPN",
+    "description": "WireGuard, NetBird, and WARP status. Click to open omarchy-vpn.",
+    "category": "Network",
+    "allowMultiple": false,
+    "defaultSection": "right"
+  }
+}

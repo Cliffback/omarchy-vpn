@@ -60,6 +60,15 @@ func setupWaybar() error {
 }
 
 func removeWaybar() error {
+	if err := unpatchWaybarFiles(); err != nil {
+		return err
+	}
+	fmt.Println("Waybar VPN module removed.")
+	reloadWaybar()
+	return nil
+}
+
+func unpatchWaybarFiles() error {
 	if err := unpatchWaybarConfig(); err != nil {
 		return fmt.Errorf("config: %w", err)
 	}
@@ -69,8 +78,6 @@ func removeWaybar() error {
 	if err := unpatchHyprlandConfig(); err != nil {
 		return fmt.Errorf("hyprland: %w", err)
 	}
-	fmt.Println("Waybar VPN module removed.")
-	reloadWaybar()
 	return nil
 }
 
@@ -121,6 +128,9 @@ func unpatchWaybarConfig() error {
 	path := waybarConfigPath()
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	content := string(data)
@@ -192,6 +202,9 @@ func unpatchWaybarStyle() error {
 	path := waybarStylePath()
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	content := string(data)
@@ -223,6 +236,9 @@ func unpatchHyprlandConfig() error {
 	path := hyprlandConfigPath()
 	data, err := os.ReadFile(path)
 	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
 		return err
 	}
 	content := string(data)
