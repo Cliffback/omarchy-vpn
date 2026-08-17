@@ -219,13 +219,10 @@ func TestWritePlugin_WritesManifestAndWidget(t *testing.T) {
 		t.Fatalf("widget does not launch as TUI.float:\n%s", widget)
 	}
 	if strings.Contains(string(widget), "󰳌") || strings.Contains(string(widget), "󰦝") {
-		t.Fatal("bar widget still uses nerd-font shield glyphs; Omarchy 4 cannot render them")
+		t.Fatal("bar widget still uses shield-lock glyphs; at bar size they read as a person")
 	}
-	if !strings.Contains(string(widget), "iconComponent") {
-		t.Fatal("expected iconComponent so the shield is drawn, not a font glyph")
-	}
-	if !fileExists(filepath.Join(dir, "VpnIcon.qml")) {
-		t.Fatal("missing VpnIcon.qml")
+	if !strings.Contains(string(widget), "0xF0498") || !strings.Contains(string(widget), "0xF0565") {
+		t.Fatal("expected md-shield / md-shield_check (0xF0498 / 0xF0565)")
 	}
 }
 

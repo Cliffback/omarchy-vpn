@@ -11,10 +11,10 @@ BarWidget {
   property string statusText: "VPN: Disconnected"
   property bool connected: false
 
-  readonly property color iconColor: {
-    var fg = bar ? bar.barForeground : Color.foreground
-    return root.connected ? fg : Qt.darker(fg, 1.55)
-  }
+  // md-shield / md-shield_check — same Material set as bluetooth, volume,
+  // and display. The TUI's shield-lock glyphs (U+F0CCC / U+F099D) collapse
+  // to a person silhouette at bar size.
+  readonly property string glyph: String.fromCodePoint(root.connected ? 0xF0565 : 0xF0498)
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -56,18 +56,9 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    slotSize: Style.bar.statusSlot
+    text: root.glyph
     tooltipText: root.statusText
-    iconComponent: Component {
-      Item {
-        VpnIcon {
-          anchors.centerIn: parent
-          iconSize: Style.space(11)
-          color: root.iconColor
-          connected: root.connected
-        }
-      }
-    }
+    dimmed: !root.connected
     onPressed: root.openTui()
   }
 }

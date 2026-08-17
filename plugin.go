@@ -209,6 +209,11 @@ func patchShellFile(home string, fn func([]byte) ([]byte, error)) error {
 }
 
 func rescanPlugins() {
+	// QML stays cached across rescanPlugins; a shell restart remounts the widget.
+	if path, err := lookPath("omarchy-restart-shell"); err == nil {
+		exec.Command(path).Run()
+		return
+	}
 	if path, err := lookPath("omarchy-shell"); err == nil {
 		exec.Command(path, "shell", "rescanPlugins").Run()
 	}
