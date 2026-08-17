@@ -1,3 +1,5 @@
+# GitHub only. Forgejo reads .forgejo/workflows/ and will not run this file
+# (softprops/action-gh-release is not mirrored on data.forgejo.org).
 name: Release
 
 on:
