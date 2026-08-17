@@ -46,17 +46,12 @@ delete_named_asset() {
   done
 }
 
+# Forgejo allows duplicate asset names, so always drop the old one first.
+delete_named_asset
 echo "attaching $name -> $repo release $tag (id $rel_id)"
 http=$(curl -sS -o "$tmp" -w '%{http_code}' -H "$auth" -X POST \
   -F "attachment=@${file}" \
   "$api/repos/$repo/releases/$rel_id/assets?name=$name")
-if [ "$http" = "409" ]; then
-  echo "asset exists; replacing"
-  delete_named_asset
-  http=$(curl -sS -o "$tmp" -w '%{http_code}' -H "$auth" -X POST \
-    -F "attachment=@${file}" \
-    "$api/repos/$repo/releases/$rel_id/assets?name=$name")
-fi
 if [ "$http" != "201" ] && [ "$http" != "200" ]; then
   echo "upload $name failed: HTTP $http" >&2
   cat "$tmp" >&2
