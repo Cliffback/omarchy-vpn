@@ -23,6 +23,9 @@ type sheetField struct {
 
 // ParseConfigFile reads a WireGuard .conf file and extracts display fields.
 func ParseConfigFile(name string) ConfigInfo {
+	if demoMode {
+		return demoConfigInfo(name)
+	}
 	path := fmt.Sprintf("/etc/wireguard/%s.conf", name)
 	out, err := exec.Command("sudo", "cat", path).Output()
 	if err != nil {

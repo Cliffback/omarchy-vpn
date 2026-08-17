@@ -34,6 +34,9 @@ type VPNStatus struct {
 // correspond to configs in /etc/wireguard/. Foreign interfaces from
 // other WireGuard apps (NetBird, Tailscale, etc.) are ignored.
 func GetActiveVPNs() []string {
+	if demoMode {
+		return demoActiveVPNs()
+	}
 	out, err := exec.Command("sudo", "wg", "show", "interfaces").Output()
 	if err != nil {
 		return nil
@@ -49,6 +52,9 @@ func GetActiveVPNs() []string {
 }
 
 func ListConfigs() []string {
+	if demoMode {
+		return demoListConfigs()
+	}
 	out, err := exec.Command("sudo", "ls", "/etc/wireguard").Output()
 	if err != nil {
 		return nil
@@ -66,6 +72,10 @@ func ListConfigs() []string {
 }
 
 func ConnectVPN(name string) error {
+	if demoMode {
+		demoConnect(name)
+		return nil
+	}
 	out, err := exec.Command("sudo", "wg-quick", "up", name).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s", extractError(string(out), err))
@@ -74,6 +84,10 @@ func ConnectVPN(name string) error {
 }
 
 func DisconnectVPN(name string) error {
+	if demoMode {
+		demoDisconnect(name)
+		return nil
+	}
 	out, err := exec.Command("sudo", "wg-quick", "down", name).CombinedOutput()
 	if err != nil {
 		return fmt.Errorf("%s", extractError(string(out), err))
@@ -95,6 +109,9 @@ func extractError(output string, fallback error) string {
 }
 
 func GetVPNStatus(name string) (VPNStatus, error) {
+	if demoMode {
+		return demoVPNStatus(name), nil
+	}
 	out, err := exec.Command("sudo", "wg", "show", name).Output()
 	if err != nil {
 		return VPNStatus{}, err
@@ -122,6 +139,9 @@ func GetVPNStatus(name string) (VPNStatus, error) {
 }
 
 func ImportConfig(src, name string) error {
+	if demoMode {
+		return nil
+	}
 	if err := exec.Command("sudo", "cp", src, fmt.Sprintf("/etc/wireguard/%s.conf", name)).Run(); err != nil {
 		return err
 	}
@@ -129,10 +149,16 @@ func ImportConfig(src, name string) error {
 }
 
 func RemoveConfig(name string) error {
+	if demoMode {
+		return nil
+	}
 	return exec.Command("sudo", "rm", fmt.Sprintf("/etc/wireguard/%s.conf", name)).Run()
 }
 
 func RenameConfig(oldName, newName string) error {
+	if demoMode {
+		return nil
+	}
 	oldPath := fmt.Sprintf("/etc/wireguard/%s.conf", oldName)
 	newPath := fmt.Sprintf("/etc/wireguard/%s.conf", newName)
 	out, err := exec.Command("sudo", "mv", oldPath, newPath).CombinedOutput()

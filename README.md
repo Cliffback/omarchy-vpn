@@ -17,7 +17,9 @@
 ---
 
 <p align="center">
-  <img src="demo.gif" alt="omarchy-vpn demo" width="800" />
+  <img src="docs/screenshots/desktop.gif" alt="omarchy-vpn desktop" width="800" />
+  <br />
+  <img src="docs/screenshots/phone.gif" alt="omarchy-vpn phone" width="280" />
 </p>
 
 ## Features
@@ -59,9 +61,12 @@ You'll need to manually create `/etc/sudoers.d/omarchy-vpn` — see the [PKGBUIL
 
 ```bash
 omarchy-vpn
+omarchy-vpn --demo   # canned tunnels only; never reads /etc/wireguard
 ```
 
 That's the whole interface. Everything happens on one screen.
+
+GIFs are recorded with VHS from `--demo` (`docs/vhs/`).
 
 ## Keybindings
 

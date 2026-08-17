@@ -23,8 +23,11 @@ func displayVersion() string {
 }
 
 func main() {
-	if len(os.Args) > 1 {
-		switch os.Args[1] {
+	args := os.Args[1:]
+	for _, a := range args {
+		switch a {
+		case "--demo":
+			enableDemoMode()
 		case "--version", "-v":
 			fmt.Println("omarchy-vpn " + displayVersion())
 			return
@@ -32,7 +35,7 @@ func main() {
 			printWaybarStatus()
 			return
 		case "--setup", "--setup-waybar", "--remove", "--remove-waybar":
-			if err := runDesktopFlag(os.Args[1]); err != nil {
+			if err := runDesktopFlag(a); err != nil {
 				fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 				os.Exit(1)
 			}

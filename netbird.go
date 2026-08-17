@@ -44,6 +44,9 @@ func (s NetBirdStatus) NeedsLogin() bool {
 
 // NetBirdAvailable reports whether the netbird CLI is installed.
 func NetBirdAvailable() bool {
+	if demoMode {
+		return false
+	}
 	_, err := exec.LookPath("netbird")
 	return err == nil
 }

@@ -44,6 +44,9 @@ func (s WarpStatus) NeedsRegistration() bool {
 
 // WarpAvailable reports whether the warp-cli binary is installed.
 func WarpAvailable() bool {
+	if demoMode {
+		return false
+	}
 	_, err := exec.LookPath("warp-cli")
 	return err == nil
 }
