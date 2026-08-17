@@ -8,9 +8,13 @@ BarWidget {
   id: root
   moduleName: "limehawk.vpn"
 
-  property string glyph: "󰳌"
   property string statusText: "VPN: Disconnected"
   property bool connected: false
+
+  readonly property color iconColor: {
+    var fg = bar ? bar.barForeground : Color.foreground
+    return root.connected ? fg : Qt.darker(fg, 1.55)
+  }
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -34,7 +38,6 @@ BarWidget {
       if (exitCode !== 0) return
       try {
         var data = JSON.parse(String(statusOut.text || "").trim())
-        root.glyph = data.text || root.glyph
         root.statusText = data.tooltip || ""
         root.connected = data.class === "connected"
       } catch (e) {}
@@ -53,11 +56,18 @@ BarWidget {
     id: button
     anchors.fill: parent
     bar: root.bar
-    text: root.glyph
     slotSize: Style.bar.statusSlot
-    fontSize: Style.font.caption
     tooltipText: root.statusText
-    dimmed: !root.connected
+    iconComponent: Component {
+      Item {
+        VpnIcon {
+          anchors.centerIn: parent
+          iconSize: Style.space(11)
+          color: root.iconColor
+          connected: root.connected
+        }
+      }
+    }
     onPressed: root.openTui()
   }
 }

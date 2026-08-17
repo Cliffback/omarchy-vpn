@@ -218,6 +218,15 @@ func TestWritePlugin_WritesManifestAndWidget(t *testing.T) {
 	if !strings.Contains(string(widget), "TUI.float") {
 		t.Fatalf("widget does not launch as TUI.float:\n%s", widget)
 	}
+	if strings.Contains(string(widget), "󰳌") || strings.Contains(string(widget), "󰦝") {
+		t.Fatal("bar widget still uses nerd-font shield glyphs; Omarchy 4 cannot render them")
+	}
+	if !strings.Contains(string(widget), "iconComponent") {
+		t.Fatal("expected iconComponent so the shield is drawn, not a font glyph")
+	}
+	if !fileExists(filepath.Join(dir, "VpnIcon.qml")) {
+		t.Fatal("missing VpnIcon.qml")
+	}
 }
 
 func omarchy4Home(t *testing.T) string {
