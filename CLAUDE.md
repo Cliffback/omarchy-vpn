@@ -78,11 +78,11 @@ Single Bubble Tea program with modal states instead of view routing. All UI is o
 
 ## AUR Publishing
 
-Source of truth is Forgejo (`limehawk/omarchy-vpn`). GitHub is a push mirror. AUR is a **separate git server** — tarball PKGBUILD only.
+Origin is private. GitHub is a push mirror. AUR is a **separate git server** — tarball PKGBUILD only.
 
 | Repo | URL | Contents |
 |------|-----|----------|
-| Forgejo | `origin/limehawk/omarchy-vpn` | Source of truth |
+| Origin | private | Source of truth |
 | GitHub | `github.com/limehawk/omarchy-vpn` | Push mirror (AUR tarball host) |
 | AUR | `aur.archlinux.org/omarchy-vpn.git` | Tarball PKGBUILD + `.SRCINFO` + `.install` only |
 
@@ -91,10 +91,10 @@ Source of truth is Forgejo (`limehawk/omarchy-vpn`). GitHub is a push mirror. AU
 **Release process:**
 
 ```bash
-# 1. Tag + push (Forgejo origin mirrors to GitHub)
+# 1. Tag + push (origin mirrors to GitHub)
 git tag -a v0.X.X -m "omarchy-vpn 0.X.X"
 git push && git push --tags
-fj -H origin release create v0.X.X -t v0.X.X
+fj release create v0.X.X -t v0.X.X
 gh release create v0.X.X
 
 # 2. Get new tarball checksum (AUR still fetches the GitHub archive)
